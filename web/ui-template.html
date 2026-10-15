@@ -1,0 +1,560 @@
+<title>JalMaa Digital Twin</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: instrument console — control rail, CTG monitor + pool map, then engineering tabs below */
+:root{
+  --bg:#EEF3F4; --panel:#FFFFFF; --ink:#0F2328; --muted:#56696E; --line:#D3DEE0; --accent:#0A7C86; --accent-ink:#FFFFFF;
+  --paper:#FFFDFB; --grid:#F0CFC2; --grid-major:#E2A792; --band:rgba(10,124,134,.07);
+  --fhr:#1B4FA0; --mhr:#B0467A; --toco:#2E7D4F; --ehg:#7A8C3A;
+  --ok:#2E7D4F; --warn:#B87A00; --urgent:#C62828; --info:#2B6CB0;
+  --water:#D6EEF1; --water-edge:#8CC6CC;
+  --f-ui:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-data:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0B1113; --panel:#121B1E; --ink:#E2ECEE; --muted:#8FA4A9; --line:#24363C; --accent:#3FC1C9; --accent-ink:#06282B;
+  --paper:#101719; --grid:#2E2320; --grid-major:#4D3029; --band:rgba(63,193,201,.08);
+  --fhr:#7FB2FF; --mhr:#F08DB8; --toco:#6BD49A; --ehg:#C9D77A;
+  --ok:#6BD49A; --warn:#F2B53A; --urgent:#FF6B6B; --info:#7FB2FF;
+  --water:#123138; --water-edge:#2C6E76; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0B1113; --panel:#121B1E; --ink:#E2ECEE; --muted:#8FA4A9; --line:#24363C; --accent:#3FC1C9; --accent-ink:#06282B;
+  --paper:#101719; --grid:#2E2320; --grid-major:#4D3029; --band:rgba(63,193,201,.08);
+  --fhr:#7FB2FF; --mhr:#F08DB8; --toco:#6BD49A; --ehg:#C9D77A;
+  --ok:#6BD49A; --warn:#F2B53A; --urgent:#FF6B6B; --info:#7FB2FF;
+  --water:#123138; --water-edge:#2C6E76; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5}
+.wrap{max-width:1360px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance}
+h1{font-size:1.6rem;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+h2{font-size:1.05rem}
+.lede{color:var(--muted);max-width:75ch;margin:4px 0 0}
+.mono,.num{font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.pad{padding:14px 16px}
+
+/* control rail */
+.rail{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:10px 14px}
+.grp{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.clock{font-family:var(--f-data);font-size:1.25rem;font-weight:600;min-width:7ch}
+button,select,input{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 11px;cursor:pointer;font-size:.88rem;line-height:1.2}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+.btn.on{background:var(--band);border-color:var(--accent);color:var(--ink)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 10px;cursor:pointer;font-family:var(--f-data);font-size:.82rem}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+select{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:6px 8px;font-size:.88rem;max-width:100%}
+
+/* main grid */
+.main{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);gap:16px}
+@media (max-width:1000px){.main{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.monitor{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:0}
+@media (max-width:720px){.monitor{grid-template-columns:minmax(0,1fr)}}
+.ctgwrap{padding:12px 12px 8px;min-width:0;border-right:1px solid var(--line)}
+@media (max-width:720px){.ctgwrap{border-right:0;border-bottom:1px solid var(--line)}}
+.ctghead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+canvas{display:block;width:100%}
+#ctg{height:380px;border-radius:6px}
+.vitals{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border-radius:0 10px 10px 0;overflow:hidden}
+@media (max-width:720px){.vitals{grid-template-columns:repeat(2,1fr);border-radius:0 0 10px 10px}}
+.v{background:var(--panel);padding:9px 11px;display:flex;flex-direction:column;gap:1px;min-width:0}
+.v.wide{grid-column:span 2}
+.v .val{font-family:var(--f-data);font-variant-numeric:tabular-nums;font-size:1.5rem;font-weight:600;line-height:1.15}
+.v .val small{font-size:.72rem;font-weight:400;color:var(--muted);margin-left:3px}
+.v .sub{font-size:.74rem;color:var(--muted)}
+.v.fhr .val{color:var(--fhr)} .v.mhr .val{color:var(--mhr)} .v.toco .val{color:var(--toco)}
+.v.alert{box-shadow:inset 3px 0 0 var(--warn)} .v.crit{box-shadow:inset 3px 0 0 var(--urgent)}
+
+/* alarms */
+.alarms{display:flex;flex-direction:column;gap:6px}
+.al{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:7px;border:1px solid var(--line)}
+.al .tier{font-family:var(--f-data);font-size:.68rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:99px;color:var(--panel)}
+.al.urgent{border-color:var(--urgent)} .al.urgent .tier{background:var(--urgent)}
+.al.urgent:not(.ackd){animation:pulse 1.2s ease-in-out infinite}
+.al.warn{border-color:var(--warn)} .al.warn .tier{background:var(--warn)}
+.al.info .tier{background:var(--info)}
+.al.ackd{opacity:.65}
+@keyframes pulse{50%{background:var(--band)}}
+@media (prefers-reduced-motion:reduce){.al.urgent:not(.ackd){animation:none}}
+.none{color:var(--muted);font-size:.9rem;padding:4px 2px}
+.log{font-family:var(--f-data);font-size:.76rem;color:var(--muted);max-height:120px;overflow:auto;margin-top:8px;display:flex;flex-direction:column;gap:2px}
+
+/* pool */
+#pool{height:300px}
+@media (max-width:480px){.links{grid-template-columns:minmax(0,1fr)} #ctg{height:300px}}
+.links{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lk{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.lk h3{font-size:.84rem;display:flex;justify-content:space-between;gap:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:1px 10px;font-size:.78rem;margin-top:4px}
+.kv dt{color:var(--muted)} .kv dd{margin:0;text-align:right;font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.netline{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:.8rem;color:var(--muted);margin-top:8px}
+.netline b{color:var(--ink);font-family:var(--f-data);font-weight:600}
+.ble{margin-top:10px;padding:8px 10px;border-radius:8px;background:var(--band);font-size:.82rem}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);padding:0 10px;overflow-x:auto}
+.tab{border:0;background:none;padding:12px 12px 10px;cursor:pointer;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabpane{padding:16px}
+.lbgrid{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.lbgrid{grid-template-columns:minmax(0,1fr)}}
+.ctl{display:flex;flex-direction:column;gap:12px}
+.ctl label{display:flex;flex-direction:column;gap:3px;font-size:.84rem}
+.ctl label span{display:flex;justify-content:space-between}
+.ctl label b{font-family:var(--f-data);font-weight:500}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.budget{width:100%;border-collapse:collapse;font-size:.85rem}
+.budget td{padding:5px 8px;border-bottom:1px solid var(--line)}
+.budget td:last-child{text-align:right;font-family:var(--f-data);font-variant-numeric:tabular-nums}
+.budget tr.total td{font-weight:700;border-bottom:2px solid var(--ink)}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+@media (max-width:860px){.charts{grid-template-columns:minmax(0,1fr)}}
+.chart{min-width:0} .chart svg{width:100%;height:auto;display:block}
+.note{font-size:.82rem;color:var(--muted);max-width:75ch}
+.callout{border-left:3px solid var(--accent);padding:8px 12px;background:var(--band);border-radius:0 8px 8px 0;font-size:.88rem}
+.tablewrap{overflow-x:auto}
+table.t{width:100%;border-collapse:collapse;font-size:.86rem;min-width:640px}
+table.t th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:8px;border-bottom:1px solid var(--line)}
+table.t td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.pill{display:inline-block;font-family:var(--f-data);font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid}
+.pill.pass{color:var(--ok);border-color:var(--ok)} .pill.fail{color:var(--urgent);border-color:var(--urgent)}
+.pill.info{color:var(--info);border-color:var(--info)} .pill.wait{color:var(--muted);border-color:var(--line)}
+.vrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.vrow input{width:90px;border:1px solid var(--line);border-radius:7px;padding:6px 8px;background:var(--panel)}
+.arch{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin-bottom:16px}
+.arch .n{flex:1 1 150px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:.8rem;min-width:0}
+.arch .n b{display:block;font-size:.86rem}
+.arch .e{align-self:center;font-family:var(--f-data);font-size:.72rem;color:var(--accent);text-align:center;flex:0 0 auto}
+.arch .n.water{background:var(--water);border-color:var(--water-edge)}
+footer{font-size:.78rem;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1><span>JalMaa</span> · Water-birth monitor digital twin</h1>
+    <p class="lede">Two sealed body pods talk by magnetic induction to relays at the pool waterline, which forward over BLE to a bedside CTG screen. This page runs the whole chain live: link physics, synthetic mother-and-baby signals, the relay network, detection and alarms. Use the scenario menu and the inject buttons to stage the jury demo.</p>
+  </header>
+
+  <section class="panel rail" aria-label="Simulation controls">
+    <div class="grp"><span class="label">Labour time</span><span class="clock" id="clock">00:00:00</span></div>
+    <div class="grp">
+      <button class="btn primary" id="play">Pause</button>
+      <div class="seg" role="group" aria-label="Speed" id="speed">
+        <button data-s="1">1×</button><button data-s="10" aria-pressed="true">10×</button><button data-s="30">30×</button><button data-s="60">60×</button>
+      </div>
+    </div>
+    <div class="grp"><label class="label" for="scen">Scenario</label><select id="scen"></select></div>
+    <div class="grp">
+      <button class="btn" id="injCtx">Trigger contraction</button>
+      <button class="btn" id="injPull">Remove abdominal pod</button>
+      <button class="btn" id="injArm">Lift arm out of water</button>
+    </div>
+    <div class="grp">
+      <button class="btn on" id="tRelay" aria-pressed="true">2 relays</button>
+      <button class="btn on" id="tTri" aria-pressed="true">Tri-axis coils</button>
+      <button class="btn" id="tSound" aria-pressed="false">Alarm sound off</button>
+      <button class="btn" id="reset">Restart</button>
+    </div>
+  </section>
+
+  <div class="main">
+    <div class="col">
+      <section class="panel monitor" aria-label="Bedside monitor">
+        <div class="ctgwrap">
+          <div class="ctghead">
+            <h2>Bedside CTG view <span class="label" style="margin-left:6px">last 10 min</span></h2>
+            <div class="legend"><span><i style="background:var(--fhr)"></i>FHR</span><span><i style="background:var(--mhr)"></i>Maternal HR</span><span><i style="background:var(--toco)"></i>Toco (strain)</span><span><i style="background:var(--ehg)"></i>EHG envelope</span></div>
+          </div>
+          <canvas id="ctg" aria-label="Cardiotocograph trace"></canvas>
+        </div>
+        <div class="vitals" id="vitals"></div>
+      </section>
+      <section class="panel pad" aria-label="Alarms">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
+          <h2>Alarms</h2><button class="btn" id="ackAll">Acknowledge all</button>
+        </div>
+        <div class="alarms" id="alarms"></div>
+        <div class="log" id="log" aria-label="Alarm log"></div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="panel pad" aria-label="Pool and links">
+        <h2 style="margin-bottom:6px">Pool, pods and relays <span class="label" style="margin-left:6px">top view</span></h2>
+        <canvas id="pool" aria-label="Pool map"></canvas>
+        <div class="links" id="links"></div>
+        <div class="netline"><span>Latency p95 <b id="nLat">–</b></span><span>Samples delivered <b id="nCmp">–</b></span><span>Carrier <b id="nF">–</b></span></div>
+        <div class="ble" id="ble"></div>
+      </section>
+    </div>
+  </div>
+
+  <section class="panel" aria-label="Engineering">
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="lb" id="tab-lb">Link budget</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="val" id="tab-val">Validation suite</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="fix" id="tab-fix">Design corrections</button>
+    </div>
+
+    <div class="tabpane" id="pane-lb" role="tabpanel">
+      <div class="lbgrid">
+        <div class="ctl">
+          <label for="lf"><span>Carrier frequency <b id="olf"></b></span><input type="range" id="lf" min="-1" max="1.4" step="0.01"></label>
+          <label for="ls"><span>Pool water conductivity <b id="ols"></b></span><input type="range" id="ls" min="-2.3" max="0.7" step="0.01"></label>
+          <label for="ld"><span>Pod-to-relay distance <b id="old"></b></span><input type="range" id="ld" min="0.2" max="2.5" step="0.01"></label>
+          <label for="lg"><span>Orientation <b id="olg"></b></span><select id="lg"><option value="0.577">Tri-axis, worst case</option><option value="1">Aligned (best case)</option><option value="0.2">Single coil, poor angle</option><option value="0.05">Single coil, near null</option></select></label>
+          <label for="la1"><span>Pod coil radius <b id="ola1"></b></span><input type="range" id="la1" min="0.01" max="0.04" step="0.001"></label>
+          <label for="la2"><span>Relay coil radius <b id="ola2"></b></span><input type="range" id="la2" min="0.05" max="0.3" step="0.005"></label>
+          <label for="lp"><span>TX drive power <b id="olp"></b></span><input type="range" id="lp" min="0" max="20" step="1"></label>
+          <label for="lr"><span>Data rate <b id="olr"></b></span><input type="range" id="lr" min="2000" max="32000" step="1000"></label>
+          <label for="le"><span>Room EMI at 1 MHz <b id="ole"></b></span><input type="range" id="le" min="0" max="70" step="1"></label>
+          <div class="grp"><button class="btn primary" id="apply">Apply to live simulation</button><button class="btn" id="lbReset">Defaults</button></div>
+        </div>
+        <div style="min-width:0">
+          <table class="budget" id="budget"></table>
+          <p class="note" id="nfnote"></p>
+          <div class="charts">
+            <div class="chart"><div class="label">Link margin vs carrier frequency</div><div id="chF"></div></div>
+            <div class="chart"><div class="label">Link margin vs distance</div><div id="chD"></div></div>
+          </div>
+          <p class="note">Model: coaxial loop coupling with matched resonant coils (Q limited to f / 2R by the data rate), conduction loss from the water skin depth, 2 cm of tissue at 0.5 S/m, receiver noise kTB + NF + man-made noise with the ITU-R P.372 slope of −27.7 dB per decade, non-coherent BFSK needing Eb/N0 ≈ 13.4 dB for BER 10⁻⁵. It is a first-order design model; the bucket test sets the real numbers.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabpane" id="pane-val" role="tabpanel" hidden>
+      <div class="vrow">
+        <button class="btn primary" id="runAll">Run all tests</button>
+        <label for="seed" class="label">Seed</label><input id="seed" class="mono" type="number" value="7" min="1">
+        <span class="note" id="valSum"></span>
+      </div>
+      <div class="tablewrap"><table class="t"><thead><tr><th>Test</th><th>Target</th><th>Result</th><th>Status</th></tr></thead><tbody id="valBody"></tbody></table></div>
+      <p class="note">Each test builds a fresh simulation from the same engine that drives the monitor above, runs it at full speed and scores the bedside output against the hidden ground truth (true contraction times, injected decelerations, scenario onset at 5 min). Change the seed to re-run with different random mother movement, artefacts and noise. Across seeds 100–129 every test passed when this page was built.</p>
+    </div>
+
+    <div class="tabpane" id="pane-fix" role="tabpanel" hidden>
+      <div class="arch" aria-label="Architecture">
+        <div class="n water"><b>Wrist pod M1</b>PPG HR / SpO₂, pulse arrival for PTT, IMU</div>
+        <div class="n water"><b>Abdominal pod M2</b>Doppler FHR, abdominal ECG + EHG, strain toco, insulated temp</div>
+        <div class="e">MI 3.39 MHz<br>TDMA 250 ms<br>CRC + ARQ</div>
+        <div class="n water"><b>Relays R1 + R2</b>Opposite walls, coil 15 cm under waterline, best-link select, water temp</div>
+        <div class="e">BLE in air</div>
+        <div class="n"><b>Bedside tablet</b>CTG view, baseline / variability / decel classifier, alarm tiers</div>
+      </div>
+      <div class="callout" style="margin-bottom:14px">The core idea holds: keep the underwater hop short and inductive, and let ordinary radio take over above the waterline. The changes below are what it takes to make the numbers in the original plan true.</div>
+      <div class="tablewrap"><table class="t"><thead><tr><th style="width:18%">Original plan</th><th style="width:30%">Problem</th><th style="width:34%">Fix used in this twin</th><th>Checked by</th></tr></thead><tbody id="fixBody"></tbody></table></div>
+      <h3 style="margin:18px 0 6px;font-size:.95rem">What the simulation cannot prove</h3>
+      <p class="note">The physiology is synthetic and the link model is first order. Before the Stage-2 abstract, measure: margin versus distance and angle with the real coils in a tub of warm tap water (with 0.5 S/m saline as the stress case), electrode impedance under the sealed skirt during 2 h immersion, Doppler FHR against a commercial monitor on a phantom, and ZHF temperature against tympanic readings. Put the measured coil Q, noise floor and path loss into the Link budget tab and re-run the validation suite.</p>
+    </div>
+  </section>
+
+  <footer>Design and demonstration simulation for the TECHgium Aqua Birth problem. Not a medical device; all clinical outputs are screening flags that a midwife must confirm.</footer>
+</div>
+
+<script>/*ENGINE*/</script>
+<script>
+(function(){
+'use strict';
+const J = window.JalMaa, DT = J.DT, $ = (id) => document.getElementById(id);
+let mon, sim, running = true, speed = 10, acc = 0, lastT = performance.now();
+let relays = 2, tri = true, scen = 'normal', sound = false, link = Object.assign({}, J.LINK_DEFAULT);
+const CAP = 4 * 3600 * 8;
+
+function reset() {
+  mon = J.makeMonitor(CAP);
+  sim = J.makeSim({ seed: (Math.random() * 1e9) | 0, scenario: scen, monitor: mon, relays, link: Object.assign({}, link, { triaxis: tri }), scenStart: 0 });
+  J.runFor(sim, 660); // open on a filled screen: 11 min of labour already recorded
+  updateButtons();
+}
+
+/* ---------- controls ---------- */
+const sel = $('scen');
+for (const [k, v] of Object.entries(J.SCENARIOS)) { const o = document.createElement('option'); o.value = k; o.textContent = v.name; sel.appendChild(o); }
+sel.addEventListener('change', () => { scen = sel.value; sim.scen = scen; sim.scenStart = sim.t; });
+$('play').addEventListener('click', () => { running = !running; $('play').textContent = running ? 'Pause' : 'Run'; });
+$('speed').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; speed = +b.dataset.s; for (const x of $('speed').children) x.setAttribute('aria-pressed', x === b); });
+$('injCtx').addEventListener('click', () => { const dur = 75; sim.ctx.push({ start: sim.t, dur, amp: 60, peak: sim.t + dur / 2, ld: 26 }); sim.nextCtx = Math.max(sim.nextCtx, sim.t + 150); });
+$('injPull').addEventListener('click', () => { sim.pods.m2.out = !sim.pods.m2.out; updateButtons(); });
+$('injArm').addEventListener('click', () => { sim.m.armOut = sim.t + 30; });
+$('tRelay').addEventListener('click', () => { relays = relays === 2 ? 1 : 2; sim.relays = relays; updateButtons(); });
+$('tTri').addEventListener('click', () => { tri = !tri; sim.link.triaxis = tri; updateButtons(); });
+$('tSound').addEventListener('click', () => { sound = !sound; if (sound) beep(660, 0.08); updateButtons(); });
+$('reset').addEventListener('click', reset);
+$('ackAll').addEventListener('click', () => { for (const k in mon.alarms) mon.ackd[k] = true; renderAlarms(true); });
+function updateButtons() {
+  const set = (id, on, txt) => { const b = $(id); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); b.textContent = txt; };
+  set('tRelay', relays === 2, relays === 2 ? '2 relays' : '1 relay');
+  set('tTri', tri, tri ? 'Tri-axis coils' : 'Single-axis coils');
+  set('tSound', sound, sound ? 'Alarm sound on' : 'Alarm sound off');
+  $('injPull').textContent = sim && sim.pods.m2.out ? 'Return abdominal pod' : 'Remove abdominal pod';
+  $('injPull').classList.toggle('on', !!(sim && sim.pods.m2.out));
+}
+
+/* ---------- audio ---------- */
+let actx = null;
+function beep(f, d) { try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); const o = actx.createOscillator(), g = actx.createGain(); o.frequency.value = f; g.gain.value = 0.08; o.connect(g); g.connect(actx.destination); o.start(); o.stop(actx.currentTime + d); } catch (e) {} }
+let lastBeep = 0;
+
+/* ---------- theme colours ---------- */
+let C = {};
+function readColors() { const cs = getComputedStyle(document.documentElement); for (const k of ['paper','grid','grid-major','band','fhr','mhr','toco','ehg','ink','muted','line','accent','ok','warn','urgent','water','water-edge','panel']) C[k] = cs.getPropertyValue('--' + k).trim(); }
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
+new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+function fit(c) { const r = c.getBoundingClientRect(), d = window.devicePixelRatio || 1; const w = Math.round(r.width * d), h = Math.round(r.height * d); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } const x = c.getContext('2d'); x.setTransform(d, 0, 0, d, 0, 0); return { x, w: r.width, h: r.height }; }
+function hms(t) { t = Math.max(0, t | 0); const h = (t / 3600) | 0, m = ((t % 3600) / 60) | 0, s = t % 60; return [h, m, s].map(v => String(v).padStart(2, '0')).join(':'); }
+
+/* ---------- CTG ---------- */
+function drawCTG() {
+  const { x, w, h } = fit($('ctg'));
+  const L = 34, R = 6, Wp = w - L - R, gap = 16, fH = Math.round((h - gap - 18) * 0.64), tTop = fH + gap, tH = h - tTop - 18;
+  const NW = 2400, end = sim.i, start = end - NW, X = (i) => L + (i - start) / NW * Wp;
+  x.clearRect(0, 0, w, h);
+  x.fillStyle = C.paper; x.fillRect(L, 0, Wp, fH); x.fillRect(L, tTop, Wp, tH);
+  const yF = (v) => fH - (v - 50) / 160 * fH, yT = (v) => tTop + tH - v / 100 * tH;
+  x.fillStyle = C.band; x.fillRect(L, yF(160), Wp, yF(110) - yF(160));
+  // vertical grid: 30 s minor, 1 min major (aligned to absolute time)
+  const first = Math.ceil(start / 120) * 120;
+  x.font = '10px ' + getComputedStyle(document.body).getPropertyValue('--f-data');
+  for (let i = first; i <= end; i += 120) {
+    const major = i % 240 === 0; x.strokeStyle = major ? C['grid-major'] : C.grid; x.lineWidth = major ? 1 : 0.6;
+    const xx = Math.round(X(i)) + 0.5; x.beginPath(); x.moveTo(xx, 0); x.lineTo(xx, fH); x.moveTo(xx, tTop); x.lineTo(xx, tTop + tH); x.stroke();
+    if (major && i % 480 === 0 && i * DT >= 0) { x.fillStyle = C.muted; x.textAlign = 'center'; x.fillText(hms(i * DT).slice(0, 5 + (i * DT >= 3600 ? 0 : 0)), xx, h - 4); }
+  }
+  for (let v = 60; v <= 200; v += 10) { const yy = Math.round(yF(v)) + 0.5, major = v % 30 === 0; x.strokeStyle = major ? C['grid-major'] : C.grid; x.lineWidth = major ? 1 : 0.6; x.beginPath(); x.moveTo(L, yy); x.lineTo(L + Wp, yy); x.stroke(); if (major) { x.fillStyle = C.muted; x.textAlign = 'right'; x.fillText(v, L - 5, yy + 3); } }
+  for (let v = 0; v <= 100; v += 20) { const yy = Math.round(yT(v)) + 0.5; x.strokeStyle = v % 40 === 0 ? C['grid-major'] : C.grid; x.lineWidth = 0.7; x.beginPath(); x.moveTo(L, yy); x.lineTo(L + Wp, yy); x.stroke(); x.fillStyle = C.muted; x.textAlign = 'right'; x.fillText(v, L - 5, yy + 3); }
+  x.save(); x.translate(10, fH / 2); x.rotate(-Math.PI / 2); x.textAlign = 'center'; x.fillStyle = C.muted; x.fillText('bpm', 0, 0); x.restore();
+  x.save(); x.translate(10, tTop + tH / 2); x.rotate(-Math.PI / 2); x.textAlign = 'center'; x.fillStyle = C.muted; x.fillText('toco', 0, 0); x.restore();
+  // contraction bars + decel tags
+  x.fillStyle = C.toco; x.globalAlpha = 0.18;
+  for (const c of mon.ctxDet) if (c.end > start) x.fillRect(X(Math.max(start, c.onset)), tTop, X(c.end) - X(Math.max(start, c.onset)), tH);
+  x.globalAlpha = 1;
+  const line = (arr, col, yf, lw, step, smoothN) => {
+    x.strokeStyle = col; x.lineWidth = lw; x.beginPath(); let pen = false;
+    for (let i = start; i <= end; i += step) {
+      if (i < 0) continue; let v = arr[i];
+      if (smoothN) { let s = 0, n = 0; for (let k = i - smoothN; k <= i + smoothN; k++) { const u = arr[k]; if (u === u) { s += u; n++; } } v = n ? s / n : NaN; }
+      if (v === v) { const xx = X(i), yy = yf(v); if (pen) x.lineTo(xx, yy); else x.moveTo(xx, yy); pen = true; } else pen = false;
+    }
+    x.stroke();
+  };
+  x.save(); x.beginPath(); x.rect(L, 0, Wp, fH); x.clip();
+  line(mon.mhr, C.mhr, yF, 1, 2, 2);
+  line(mon.fhr, C.fhr, yF, 1.4, 1, 0);
+  x.restore();
+  x.save(); x.beginPath(); x.rect(L, tTop, Wp, tH); x.clip();
+  x.setLineDash([3, 3]); line(mon.ehg, C.ehg, yT, 1, 2, 4); x.setLineDash([]);
+  line(mon.strain, C.toco, yT, 1.4, 1, 2);
+  x.restore();
+  x.font = '600 10px ' + getComputedStyle(document.body).getPropertyValue('--f-data'); x.textAlign = 'center';
+  for (const d of mon.decels) if (d.nadir > start) {
+    const col = d.type === 'late' ? C.urgent : C.muted, xx = X(d.nadir);
+    x.fillStyle = col; x.fillText(d.type === 'late' ? 'LATE' : d.type === 'early' ? 'EARLY' : 'VAR', xx, 12);
+    x.strokeStyle = col; x.lineWidth = 1; x.beginPath(); x.moveTo(X(d.start), 18); x.lineTo(X(d.end), 18); x.stroke();
+  }
+  if (mon.baseline === mon.baseline) { x.strokeStyle = C.fhr; x.globalAlpha = 0.5; x.setLineDash([6, 4]); const yy = yF(mon.baseline); x.beginPath(); x.moveTo(L, yy); x.lineTo(L + Wp, yy); x.stroke(); x.setLineDash([]); x.globalAlpha = 1; }
+}
+
+/* ---------- vitals ---------- */
+function avg(arr, n) { let s = 0, c = 0; for (let i = sim.i - n; i < sim.i; i++) { const v = arr[i]; if (v === v) { s += v; c++; } } return c ? s / c : NaN; }
+const fmt = (v, d) => v === v && v != null ? v.toFixed(d) : '–';
+function renderVitals() {
+  const a = mon.alarms, cls = (keys) => keys.some(k => a[k] && a[k].tier === 'urgent') ? 'crit' : keys.some(k => a[k]) ? 'alert' : '';
+  const fhrNow = avg(mon.fhr, 16), n10 = mon.ctxDet.filter(c => (sim.i - c.onset) * DT < 600).length;
+  const lastC = mon.ctxDet[mon.ctxDet.length - 1];
+  const bat = (id) => sim.pods[id].mAh / J.POD[id].cap * 100;
+  const hrs = (id) => sim.pods[id].mAh / sim.pods[id].avgMA;
+  const tiles = [
+    ['fhr ' + cls(['late', 'tachy', 'brady', 'lowvar', 'coinc']), 'FHR', fmt(fhrNow, 0), 'bpm', `baseline ${fmt(mon.baseline, 0)} · var ${fmt(mon.variability, 1)}`],
+    ['mhr ' + cls(['mhr']), 'Maternal HR', fmt(avg(mon.mhr, 16), 0), 'bpm', 'wrist PPG'],
+    [cls(['spo2']), 'SpO₂', fmt(avg(mon.spo2, 16), 0), '%', 'wrist reflectance'],
+    ['', 'MAP trend', fmt(avg(mon.map, 120), 0), 'mmHg', 'from PTT · trend only'],
+    ['toco ' + cls(['tsys']), 'Contractions', String(n10), '/10 min', lastC ? `last ${((lastC.end - lastC.onset) * DT).toFixed(0)} s, ${(mon.ctxDet.length)} total` : 'none yet'],
+    [cls(['tcore']), 'Maternal temp', fmt(avg(mon.tcore, 40), 1), '°C', 'insulated ZHF module'],
+    [cls(['twater']), 'Pool water', fmt(mon.twater[sim.i - 1], 1), '°C', 'relay probe · limit 37.5'],
+    [cls(['bat_m1', 'bat_m2']), 'Pod batteries', `${fmt(bat('m1'), 0)}/${fmt(bat('m2'), 0)}`, '%', `≈ ${fmt(hrs('m1'), 0)} h / ${fmt(hrs('m2'), 0)} h left`]
+  ];
+  $('vitals').innerHTML = tiles.map(t => `<div class="v ${t[0]}"><span class="label">${t[1]}</span><span class="val">${t[2]}<small>${t[3]}</small></span><span class="sub">${t[4]}</span></div>`).join('');
+}
+
+/* ---------- alarms ---------- */
+const ORDER = { urgent: 0, warn: 1, info: 2 };
+let alarmSig = '';
+function renderAlarms(force) {
+  const list = Object.values(mon.alarms).sort((p, q) => ORDER[p.tier] - ORDER[q.tier] || p.since - q.since);
+  const sig = list.map(a => a.key + a.msg + (mon.ackd[a.key] ? 1 : 0)).join('|') + mon.log.length;
+  if (sig === alarmSig && !force) return; alarmSig = sig;
+  $('alarms').innerHTML = list.length ? list.map(a => `<div class="al ${a.tier}${mon.ackd[a.key] ? ' ackd' : ''}"><span class="tier">${a.tier === 'warn' ? 'warning' : a.tier}</span><span>${a.msg}<span class="mono" style="color:var(--muted);font-size:.75rem"> · since ${hms(a.since)}</span></span>${mon.ackd[a.key] ? '<span class="label">acknowledged</span>' : `<button class="btn" data-ack="${a.key}">Acknowledge</button>`}</div>`).join('') : '<div class="none">No active alarms. Pick a scenario above to provoke one.</div>';
+  $('log').innerHTML = mon.log.slice(0, 30).map(l => `<span>${hms(l.t)}  ${l.tier.toUpperCase().padEnd(6)} ${l.msg}</span>`).join('');
+}
+$('alarms').addEventListener('click', (e) => { const b = e.target.closest('[data-ack]'); if (b) { mon.ackd[b.dataset.ack] = true; renderAlarms(true); } });
+
+/* ---------- pool ---------- */
+function marginColor(m) { return m > 10 ? C.ok : m > 3 ? C.warn : C.urgent; }
+function drawPool() {
+  const { x, w, h } = fit($('pool'));
+  x.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, s = Math.min(w, h) * 0.4 / J.POOL_R, P = (px, py) => [cx + px * s, cy + py * s];
+  x.fillStyle = C.water; x.strokeStyle = C['water-edge']; x.lineWidth = 6;
+  x.beginPath(); x.arc(cx, cy, J.POOL_R * s, 0, Math.PI * 2); x.fill(); x.stroke();
+  x.setLineDash([4, 4]); x.lineWidth = 1; x.strokeStyle = C['water-edge']; x.beginPath(); x.arc(cx, cy, J.MOTHER_R * s, 0, Math.PI * 2); x.stroke(); x.setLineDash([]);
+  const rel = J.relayPositions(sim.relays);
+  const font = getComputedStyle(document.body).getPropertyValue('--f-data');
+  // links
+  for (const id of ['m1', 'm2']) {
+    const p = sim.pods[id], R = rel[p.relay] || rel[0];
+    let [px, py] = P(p.x, p.y); if (p.out) { px = Math.min(w - 20, px); }
+    const [rx, ry] = P(R.x, R.y);
+    x.strokeStyle = marginColor(p.margin); x.lineWidth = 2; x.setLineDash(p.margin > 3 ? [] : [3, 4]);
+    x.beginPath(); x.moveTo(px, py); x.lineTo(rx, ry); x.stroke(); x.setLineDash([]);
+  }
+  // mother
+  const [mx, my] = P(sim.m.x, sim.m.y);
+  x.save(); x.translate(mx, my); x.rotate(sim.m.head); x.fillStyle = C.panel; x.strokeStyle = C.muted; x.lineWidth = 1.5;
+  x.beginPath(); x.ellipse(0, 0, 0.2 * s, 0.13 * s, 0, 0, Math.PI * 2); x.fill(); x.stroke();
+  x.beginPath(); x.arc(0.24 * s, 0, 0.06 * s, 0, Math.PI * 2); x.fill(); x.stroke(); x.restore();
+  // relays
+  rel.forEach((R, k) => { const [rx, ry] = P(R.x, R.y); x.fillStyle = C.accent; x.fillRect(rx - 7, ry - 14, 14, 28); x.fillStyle = C.ink; x.font = '600 11px ' + font; x.textAlign = R.x > 0 ? 'right' : 'left'; x.fillText('R' + (k + 1), rx + (R.x > 0 ? -12 : 12), ry - 18); });
+  // pods
+  for (const id of ['m1', 'm2']) {
+    const p = sim.pods[id]; let [px, py] = P(p.x, p.y); if (p.out) px = Math.min(w - 20, px);
+    x.fillStyle = id === 'm1' ? C.mhr : C.fhr; x.beginPath(); x.arc(px, py, 6, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = C.panel; x.lineWidth = 2; x.stroke();
+    x.fillStyle = C.ink; x.font = '600 11px ' + font; x.textAlign = 'center';
+    x.fillText(id === 'm1' ? 'M1' : 'M2', px, py - 10);
+    if (p.out) { x.fillStyle = C.urgent; x.fillText('out of range', px - 20, py + 20); }
+    else if (p.z < 0) { x.fillStyle = C.muted; x.fillText('in air', px, py + 18); }
+  }
+  x.fillStyle = C.muted; x.font = '10px ' + font; x.textAlign = 'left'; x.fillText(`pool Ø ${(J.POOL_R * 200).toFixed(0)} cm`, 8, h - 8);
+}
+
+function renderLinks() {
+  $('links').innerHTML = ['m1', 'm2'].map(id => {
+    const p = sim.pods[id];
+    return `<div class="lk"><h3><span>${J.POD[id].name}</span><span class="dot" style="background:${marginColor(p.margin)}"></span></h3><dl class="kv">
+      <dt>Link margin</dt><dd>${p.margin > -99 ? p.margin.toFixed(1) : '< −99'} dB</dd>
+      <dt>Packet error</dt><dd>${p.per < 1e-4 ? '< 0.01' : (p.per * 100).toFixed(2)} %</dd>
+      <dt>Distance</dt><dd>${p.d.toFixed(2)} m</dd><dt>Via relay</dt><dd>R${p.relay + 1}</dd>
+      <dt>Coil coupling</dt><dd>${(p.g * 100).toFixed(0)} %</dd>
+      <dt>Depth</dt><dd>${p.out ? 'removed' : p.z < 0 ? 'above water' : (p.z * 100).toFixed(0) + ' cm'}</dd></dl></div>`;
+  }).join('');
+  const lat = mon.lat.slice(-2000);
+  $('nLat').textContent = lat.length ? (lat.slice().sort((a, b) => a - b)[Math.floor(lat.length * 0.95)] * 1000).toFixed(0) + ' ms' : '–';
+  const g = mon.generated.m1 + mon.generated.m2;
+  $('nCmp').textContent = g ? ((mon.delivered.m1 + mon.delivered.m2) / g * 100).toFixed(2) + ' %' : '–';
+  $('nF').textContent = (sim.link.f / 1e6).toFixed(2) + ' MHz';
+  const bd = J.bleFailDepth(sim.link.sigma) * 100, bm = J.bleMargin(0.3, sim.link.sigma);
+  $('ble').innerHTML = `<b>Why not plain BLE?</b> A 2.4 GHz beacon at the abdominal pod's depth (30 cm) arrives with <span class="mono">${bm.toFixed(0)} dB</span> margin, so it drops off the tablet. Water absorbs <span class="mono">${(J.waterAlphaDbPerM(2.44e9, sim.link.sigma) / 100).toFixed(1)} dB/cm</span> here; the link fails below about <span class="mono">${bd.toFixed(0)} cm</span>.`;
+}
+
+/* ---------- main loop ---------- */
+let lastUI = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - lastT) / 1000); lastT = now;
+  if (running && sim.i < CAP - 20) { acc += dt * speed; let n = 0; while (acc >= DT && n < 3000) { J.step(sim); acc -= DT; n++; } }
+  drawCTG(); drawPool();
+  if (now - lastUI > 250) {
+    lastUI = now; $('clock').textContent = hms(sim.t); renderVitals(); renderLinks(); renderAlarms();
+    if (sound && now - lastBeep > 2000 && Object.values(mon.alarms).some(a => a.tier === 'urgent' && !mon.ackd[a.key])) { lastBeep = now; beep(880, 0.15); setTimeout(() => beep(880, 0.15), 250); }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- tabs ---------- */
+document.querySelector('.tabs').addEventListener('click', (e) => {
+  const b = e.target.closest('.tab'); if (!b) return;
+  for (const t of document.querySelectorAll('.tab')) { const on = t === b; t.setAttribute('aria-selected', on); $('pane-' + t.dataset.tab).hidden = !on; }
+});
+
+/* ---------- link budget explorer ---------- */
+const lbIds = ['lf', 'ls', 'ld', 'lg', 'la1', 'la2', 'lp', 'lr', 'le'];
+function lbDefaults() { $('lf').value = Math.log10(J.LINK_DEFAULT.f / 1e6); $('ls').value = Math.log10(J.LINK_DEFAULT.sigma); $('ld').value = 1.2; $('lg').value = '0.577'; $('la1').value = J.LINK_DEFAULT.a1; $('la2').value = J.LINK_DEFAULT.a2; $('lp').value = J.LINK_DEFAULT.ptx; $('lr').value = J.LINK_DEFAULT.rate; $('le').value = J.LINK_DEFAULT.emi1MHz; }
+function lbParams() { return Object.assign({}, J.LINK_DEFAULT, { f: Math.pow(10, +$('lf').value) * 1e6, sigma: Math.pow(10, +$('ls').value), a1: +$('la1').value, a2: +$('la2').value, ptx: +$('lp').value, rate: +$('lr').value, emi1MHz: +$('le').value }); }
+function svgChart(series, o) {
+  const W = 520, H = 230, ml = 40, mr = 22, mt = 10, mb = 30, pw = W - ml - mr, ph = H - mt - mb;
+  const xs = (v) => ml + (o.logx ? (Math.log10(v) - Math.log10(o.x0)) / (Math.log10(o.x1) - Math.log10(o.x0)) : (v - o.x0) / (o.x1 - o.x0)) * pw;
+  const ys = (v) => mt + (1 - (Math.max(o.y0, Math.min(o.y1, v)) - o.y0) / (o.y1 - o.y0)) * ph;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.label}"><g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--muted)">`;
+  for (let y = o.y0; y <= o.y1; y += o.ystep) s += `<line x1="${ml}" x2="${W - mr}" y1="${ys(y)}" y2="${ys(y)}" stroke="var(--line)" stroke-width="${y === 0 ? 0 : 1}"/><text x="${ml - 6}" y="${ys(y) + 3}" text-anchor="end">${y}</text>`;
+  for (const t of o.xticks) s += `<line x1="${xs(t)}" x2="${xs(t)}" y1="${mt}" y2="${mt + ph}" stroke="var(--line)"/><text x="${xs(t)}" y="${H - 14}" text-anchor="middle">${o.xfmt(t)}</text>`;
+  s += `<line x1="${ml}" x2="${W - mr}" y1="${ys(0)}" y2="${ys(0)}" stroke="var(--urgent)" stroke-dasharray="4 3"/><text x="${W - mr}" y="${ys(0) - 4}" text-anchor="end" fill="var(--urgent)">0 dB margin</text>`;
+  s += `<text x="${ml + pw / 2}" y="${H - 2}" text-anchor="middle">${o.xlabel}</text></g>`;
+  series.forEach((se) => { s += `<polyline fill="none" stroke="${se.color}" stroke-width="${se.w || 2}" ${se.dash ? `stroke-dasharray="${se.dash}"` : ''} points="${se.pts.map(p => xs(p[0]).toFixed(1) + ',' + ys(p[1]).toFixed(1)).join(' ')}"/>`; });
+  if (o.marker) s += `<circle cx="${xs(o.marker[0])}" cy="${ys(o.marker[1])}" r="4.5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/>`;
+  return s + '</svg><div class="legend" style="margin-top:4px">' + series.map(se => `<span><i style="background:${se.color}"></i>${se.name}</span>`).join('') + '</div>';
+}
+function renderLB() {
+  const p = lbParams(), d = +$('ld').value, g = +$('lg').value, L = J.miLink(p, d, g);
+  $('olf').textContent = (p.f / 1e6).toFixed(2) + ' MHz'; $('ols').textContent = p.sigma.toFixed(3) + ' S/m'; $('old').textContent = d.toFixed(2) + ' m';
+  $('ola1').textContent = (p.a1 * 100).toFixed(1) + ' cm'; $('ola2').textContent = (p.a2 * 100).toFixed(1) + ' cm'; $('olp').textContent = p.ptx + ' dBm';
+  $('olr').textContent = (p.rate / 1000).toFixed(0) + ' kbit/s'; $('ole').textContent = p.emi1MHz + ' dB'; $('olg').textContent = (g * 100).toFixed(0) + ' %';
+  const per = J.perOf(L.ber, J.POD.m2.bits);
+  const rows = [['TX drive power', p.ptx.toFixed(1) + ' dBm'], ['Coil coupling loss (k = ' + L.k.toExponential(2) + ', Q = ' + L.Q.toFixed(0) + ')', '−' + L.couplingDb.toFixed(1) + ' dB'],
+    ['Conduction loss in water (skin depth ' + J.skinDepth(p.f, p.sigma).toFixed(2) + ' m)', '−' + L.eddyDb.toFixed(1) + ' dB'], ['Tissue loss, 2 cm', '−' + L.tissueDb.toFixed(1) + ' dB'],
+    ['Received power', L.prx.toFixed(1) + ' dBm'], ['Noise floor (kTB + NF + ' + L.emi.toFixed(0) + ' dB EMI)', L.noise.toFixed(1) + ' dBm'],
+    ['Eb/N0', L.ebn0.toFixed(1) + ' dB'], ['Required Eb/N0 (BFSK, BER 10⁻⁵)', J.EBN0_REQ.toFixed(1) + ' dB'], ['Link margin', L.margin.toFixed(1) + ' dB'],
+    ['Abdominal frame error rate (576 bit)', per < 1e-6 ? '< 10⁻⁶' : per.toExponential(1)]];
+  $('budget').innerHTML = rows.map((r, k) => `<tr class="${k === 8 ? 'total' : ''}"><td>${r[0]}</td><td style="${k === 8 ? 'color:' + (L.margin > 6 ? 'var(--ok)' : L.margin > 0 ? 'var(--warn)' : 'var(--urgent)') : ''}">${r[1]}</td></tr>`).join('');
+  const nf = J.nearFieldRadius(p.f, p.sigma);
+  $('nfnote').innerHTML = L.nearField ? `Near-field radius in water at this frequency is ${nf.toFixed(2)} m, so the inductive model holds at ${d.toFixed(2)} m.` : `<b style="color:var(--warn)">Outside the near field:</b> at ${(p.f / 1e6).toFixed(2)} MHz the near-field radius in water is only ${nf.toFixed(2)} m, so the inductive model is optimistic beyond that. Lower the carrier to keep the whole pool inside the near field.`;
+  const fs = []; for (let e = -1; e <= 1.4; e += 0.02) fs.push(Math.pow(10, e) * 1e6);
+  const sig = [[p.sigma, 'This water', 'var(--accent)'], [0.5, '0.5 S/m stress', 'var(--warn)'], [0.005, 'Very soft water', 'var(--muted)']];
+  $('chF').innerHTML = svgChart(sig.map(([sv, n, c], k) => ({ name: n, color: c, w: k ? 1.5 : 2.5, dash: k === 2 ? '4 3' : '', pts: fs.map(f => [f, J.miLink(Object.assign({}, p, { f, sigma: sv }), d, g).margin]) })),
+    { label: 'margin vs frequency', logx: true, x0: 0.1e6, x1: 25e6, y0: -30, y1: 50, ystep: 10, xticks: [0.1e6, 0.3e6, 1e6, 3e6, 6.78e6, 13.56e6], xfmt: (v) => (v / 1e6 < 1 ? (v / 1e6).toFixed(1) : +(v / 1e6).toFixed(2)), xlabel: 'MHz (log)', marker: [p.f, L.margin] });
+  const ds = []; for (let x = 0.2; x <= 2.5; x += 0.02) ds.push(x);
+  $('chD').innerHTML = svgChart([[g, 'This orientation', 'var(--accent)'], [0.577, 'Tri-axis worst', 'var(--ok)'], [0.05, 'Single coil near null', 'var(--urgent)']].map(([gv, n, c], k) => ({ name: n, color: c, w: k ? 1.5 : 2.5, dash: k ? '4 3' : '', pts: ds.map(x => [x, J.miLink(p, x, gv).margin]) })),
+    { label: 'margin vs distance', logx: false, x0: 0.2, x1: 2.5, y0: -30, y1: 60, ystep: 10, xticks: [0.5, 1, 1.5, 2, 2.5], xfmt: (v) => v + ' m', xlabel: 'distance pod → relay', marker: [d, L.margin] });
+}
+lbIds.forEach(id => $(id).addEventListener('input', renderLB));
+$('lbReset').addEventListener('click', () => { lbDefaults(); renderLB(); });
+$('apply').addEventListener('click', () => { const p = lbParams(); link = Object.assign({}, p); sim.link = Object.assign({}, p, { triaxis: tri }); $('apply').textContent = 'Applied'; setTimeout(() => $('apply').textContent = 'Apply to live simulation', 1500); });
+
+/* ---------- validation ---------- */
+function renderValRows() { $('valBody').innerHTML = J.TESTS.map(T => `<tr id="vr-${T.id}"><td>${T.name}</td><td>${T.target}</td><td class="mono" data-r>–</td><td data-s><span class="pill wait">not run</span></td></tr>`).join(''); }
+function runAll() {
+  const seed = Math.max(1, parseInt($('seed').value, 10) || 7); let k = 0, pass = 0, fail = 0; $('runAll').disabled = true; $('valSum').textContent = 'Running…';
+  for (const T of J.TESTS) { const r = $('vr-' + T.id); r.querySelector('[data-s]').innerHTML = '<span class="pill wait">queued</span>'; r.querySelector('[data-r]').textContent = '–'; }
+  const next = () => {
+    if (k >= J.TESTS.length) { $('runAll').disabled = false; $('valSum').textContent = `${pass} passed, ${fail} failed, seed ${seed}`; return; }
+    const T = J.TESTS[k++], row = $('vr-' + T.id); row.querySelector('[data-s]').innerHTML = '<span class="pill wait">running</span>';
+    setTimeout(() => { const res = T.run(seed); row.querySelector('[data-r]').textContent = res.value; row.querySelector('[data-s]').innerHTML = res.pass === null ? '<span class="pill info">reference</span>' : res.pass ? '<span class="pill pass">PASS</span>' : '<span class="pill fail">FAIL</span>'; if (res.pass === true) pass++; else if (res.pass === false) fail++; next(); }, 20);
+  };
+  next();
+}
+$('runAll').addEventListener('click', runAll);
+
+/* ---------- design corrections ---------- */
+const FIX = [
+  ['13.56 MHz MI carrier', 'Water conduction loss grows with √(f·σ): skin depth is 0.61 m in tap water and 0.19 m at 0.5 S/m. At 13.56 MHz the near field in water ends at 0.41 m, so a 1.5 m hop is no longer purely inductive.', '3.39 MHz carrier (inductive short-range band; confirm with WPC before submission). The whole pool sits inside the 1.6 m near field and the link keeps margin when the water gets salty. 6.78 MHz ISM is the fallback.', 'Link budget tab; coverage in contaminated water'],
+  ['One waterline relay, single-coil MI', 'From the far side of the pool the hop is 1.7 m, and a single coil has orientation nulls. In 0.5 S/m water the original geometry covers about two-thirds of positions.', 'Two relays on opposite walls with best-link selection per frame, and three orthogonal coils in each pod (worst-case coupling 58 %).', 'Coverage tests (100 % vs ≈ 66 %)'],
+  ['“BLE dies at 5 cm”', 'At 2.4 GHz water absorbs about 1.7 dB/cm; adding the water-air interface and antenna detuning, BLE survives to roughly 20 cm. At 5 cm the beacon would still show on the tablet and the demo would backfire.', 'Run the control demo at 30 cm, the depth of the abdominal pod. The point stands: the belt is too deep for BLE.', 'BLE control test'],
+  ['BER < 10⁻⁶ as the pass mark', 'Showing 10⁻⁶ needs millions of error-free bits per test point, which a weekend bucket test will not produce.', 'CRC-16 per frame with automatic retransmission; report packet error rate and delivered-sample percentage, which judges can see on the screen.', 'Data completeness test'],
+  ['Transmit burst every 1 s, latency < 500 ms', 'A 1 s batching interval alone adds up to 1 s of delay.', '250 ms TDMA superframe with two slots per pod (36 ms and 72 ms at 8 kbit/s, 216 ms total).', 'Latency test (p95 ≈ 140 ms)'],
+  ['ESP32 in every pod', 'Its Wi-Fi/BLE radio is useless underwater and it draws 30–80 mA when active, which breaks the 12 h target in a small sealed pod.', 'Low-power MCU (nRF52 or STM32L4 class) driving a discrete MI front end in the pods; ESP32 only in the relays where BLE is used.', 'Battery test (47 h / 31 h)'],
+  ['Dry EHG electrodes in the pool', 'Pool water is conductive and shorts adjacent surface electrodes, wiping out the microvolt EHG.', 'Electrodes sit inside a hydrophobic adhesive skirt that seals each contact; the pod checks electrode impedance and falls back to the strain toco if a seal fails. Contractions are only declared when both channels agree.', 'Contraction test (artefacts rejected); bench impedance soak needed'],
+  ['PTT from an EHG “R-wave proxy”', 'The EHG band (0.05–5 Hz) has no QRS complex, and the two pods have independent clocks.', 'Record maternal ECG (0.5–40 Hz) from the same abdominal electrodes and derive EHG by low-pass filtering. Relays send a sync beacon so pod clocks agree to about 1 ms. Calibrate against a cuff before immersion and show it as a trend only.', 'MAP trend tile; cuff comparison needed'],
+  ['Skin thermistor for maternal temperature', 'Under water in a 37 °C pool, a skin thermistor reads the water, not the mother.', 'Measure pool water at the relay (alarm above 37.5 °C) and maternal temperature with an insulated zero-heat-flux module on the belt, checked against hourly tympanic readings.', 'Water and maternal temperature alarms'],
+  ['Doppler FHR trusted as fetal', 'A known CTG failure: the probe can lock onto the maternal pulse and print a reassuring trace.', 'Continuous cross-check of FHR against wrist-pod maternal HR; a 30 s match raises a warning to reposition the probe.', 'Maternal pulse coincidence test'],
+  ['Continuous 2 MHz CW Doppler for 12 h', 'Long exposure needs an acoustic output argument.', 'Keep output within fetal Doppler limits (Ispta.3 ≤ 94 mW/cm²), duty-cycle when signal quality is good, document under IEC 60601-2-37.', 'Design review item'],
+  ['Onset error < 2 s against palpation', 'Hand palpation is itself uncertain by several seconds, so the target cannot be verified.', 'Target ≤ 10 s against a reference tocodynamometer recorded on land before immersion.', 'Contraction test (≈ 4 s)'],
+  ['Qi charging while floating', 'Qi needs the coils within about 10 mm and aligned, and Li-Po should not be charged in the pool.', 'Charge on a dock out of water; a hall-effect switch wakes the sealed pod (no button); the cell sits in its own potted pocket with a thermal fuse.', 'Design review item']
+];
+$('fixBody').innerHTML = FIX.map(f => `<tr><td><b>${f[0]}</b></td><td>${f[1]}</td><td>${f[2]}</td><td class="note">${f[3]}</td></tr>`).join('');
+
+/* ---------- boot ---------- */
+reset(); lbDefaults(); renderLB(); renderValRows();
+requestAnimationFrame((t) => { lastT = t; frame(t); });
+})();
+</script>
