@@ -1,5 +1,9 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>JalMaa Digital Twin</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
@@ -26,7 +30,7 @@
   --ok:#6BD49A; --warn:#F2B53A; --urgent:#FF6B6B; --info:#7FB2FF;
   --water:#123138; --water-edge:#2C6E76; color-scheme:dark}
 *{box-sizing:border-box}
-body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5}
 .wrap{max-width:1360px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px;display:flex;flex-direction:column;gap:16px}
 h1,h2,h3{margin:0;text-wrap:balance}
 h1{font-size:1.6rem;letter-spacing:-.01em}
@@ -140,6 +144,8 @@ table.t td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:to
 .arch .n.water{background:var(--water);border-color:var(--water-edge)}
 footer{font-size:.78rem;color:var(--muted)}
 </style>
+</head>
+<body>
 
 <div class="wrap">
   <header>
@@ -558,3 +564,5 @@ reset(); lbDefaults(); renderLB(); renderValRows();
 requestAnimationFrame((t) => { lastT = t; frame(t); });
 })();
 </script>
+</body>
+</html>

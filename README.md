@@ -64,6 +64,10 @@ node tests/run-validation.js 7     # seed is optional
 - **FHR vs maternal HR coincidence check** against Doppler mis-registration.
 - Contractions declared only when **EHG and strain agree** (motion-artefact rejection).
 
+## Team
+
+Designed and built by the **JalMaa team** for L&T TECHgium.
+
 ## Limits
 
 The physiology is synthetic and the link model is first order. Next step: measure the real coil pair in a tub of warm tap water (and 0.5 S/m saline) and feed the measured Q, noise floor and path loss into the Link budget tab.
