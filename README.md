@@ -68,6 +68,11 @@ node tests/run-validation.js 7     # seed is optional
 
 Designed and built by the **JalMaa team** for L&T TECHgium.
 
+| Member | Role | GitHub |
+|---|---|---|
+| K. P. Amalnath | Mentor, system architecture | [@amalnathkp13-boop](https://github.com/amalnathkp13-boop) |
+| Chellammai N (732923BMR014) | Student lead, Biomedical Engineering | [@Chellammai-N](https://github.com/Chellammai-N) |
+
 ## Limits
 
 The physiology is synthetic and the link model is first order. Next step: measure the real coil pair in a tub of warm tap water (and 0.5 S/m saline) and feed the measured Q, noise floor and path loss into the Link budget tab.
